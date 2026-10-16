@@ -19,12 +19,12 @@ jobs:
         with:
           auto-update-conda: true
           python-version: "3.11"
-          activate-environment: build-env
+          activate-environment: ""
 
       - name: Install build tools
         shell: bash -l {0}
         run: |
-          conda install -y -c conda-forge conda-build anaconda-client
+          conda install -n base -y -c conda-forge conda-build anaconda-client
 
       - name: Extract Tag Version
         id: get_version
