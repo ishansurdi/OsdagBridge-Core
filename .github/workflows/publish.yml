@@ -19,7 +19,7 @@ jobs:
         with:
           auto-update-conda: true
           python-version: "3.11"
-          activate-environment: ""
+          activate-environment: build-env
 
       - name: Install build tools
         shell: bash -l {0}
