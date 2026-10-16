@@ -4,11 +4,15 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -el {0}
 
     steps:
       - name: Checkout repository
@@ -17,39 +21,46 @@ jobs:
       - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
-          auto-update-conda: true
+          auto-update-conda: false
           python-version: "3.11"
+          channels: conda-forge,defaults
+          channel-priority: strict
           activate-environment: build-env
 
-      - name: Install build tools
-        shell: bash -l {0}
+      - name: Install conda-build and anaconda-client
         run: |
-          conda install -n base -y -c conda-forge conda-build anaconda-client
+          conda install -y conda-build anaconda-client
 
-      - name: Extract Tag Version
-        id: get_version
-        shell: bash
+      - name: Extract version from tag
         run: |
-          # Strip leading 'v' if triggered by a tag (e.g. v1.0.1 -> 1.0.1)
           if [[ "$GITHUB_REF_NAME" =~ ^v[0-9] ]]; then
             VERSION=${GITHUB_REF_NAME#v}
             echo "PKG_VERSION=$VERSION" >> $GITHUB_ENV
             echo "Building version from tag: $VERSION"
           else
-            echo "Not a version tag ($GITHUB_REF_NAME), falling back to recipe default."
+            echo "No version tag, using recipe default."
           fi
 
-      - name: Build Conda Package
-        shell: bash -l {0}
+      - name: Build conda package
         run: |
-          conda build conda-recipe -c osdag -c conda-forge --output-folder ./conda-dist
+          conda build conda-recipe \
+            -c osdag \
+            -c conda-forge \
+            --no-test \
+            --output-folder ./conda-dist
+
+      - name: List built packages
+        run: |
+          find ./conda-dist -type f \( -name "*.conda" -o -name "*.tar.bz2" \)
 
       - name: Upload to Anaconda
-        shell: bash -l {0}
         env:
           ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_API_TOKEN }}
         run: |
-          # Upload any built .conda or .tar.bz2 packages
           PACKAGES=$(find ./conda-dist -type f \( -name "*.conda" -o -name "*.tar.bz2" \))
-          echo "Found packages to upload: $PACKAGES"
+          if [ -z "$PACKAGES" ]; then
+            echo "ERROR: No packages found to upload!"
+            exit 1
+          fi
+          echo "Uploading: $PACKAGES"
           anaconda --token "$ANACONDA_API_TOKEN" upload --label main --skip-existing $PACKAGES
