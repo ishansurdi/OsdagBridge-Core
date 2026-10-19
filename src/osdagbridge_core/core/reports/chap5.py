@@ -5,7 +5,14 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+<<<<<<< HEAD:src/osdagbridge_core/core/reports/chap5.py
 from osdagbridge_core.core.utils.common import (
+=======
+from osdagbridge.core.utils.common import (
+    KEY_TD_CB_SECTION_PROPS_BRACING,
+    KEY_TD_CB_SECTION_PROPS_BOTTOM_CHORD,
+    KEY_TD_CB_SECTION_PROPS_TOP_CHORD,
+>>>>>>> 9d3c1f3 (Chap 5: Populate Ag and rmin):src/osdagbridge/core/reports/chap5.py
     KEY_DD_ARM_WHEEL_OH,
     KEY_DD_AS_BOT,
     KEY_DD_AS_LONG,
@@ -935,14 +942,14 @@ def ch5_design_checks(checks_data, bridge, chart_paths=None) -> str:
 
                 # Fetch properties from output_dict
                 if member == "diagonal":
-                    pfx = f"transverse_member_design.cb.section_properties.bracing.{pair_id}"
+                    pfx = KEY_TD_CB_SECTION_PROPS_BRACING
                 else:
-                    pfx = f"transverse_member_design.cb.section_properties.bottom_chord.{pair_id}"
-                    if bridge.output_dict.get(f"{pfx}.A") is None:
-                        pfx = f"transverse_member_design.cb.section_properties.top_chord.{pair_id}"
+                    pfx = KEY_TD_CB_SECTION_PROPS_BOTTOM_CHORD
+                    if bridge.output_dict.get(f"{pfx}.A.{pair_id}") is None:
+                        pfx = KEY_TD_CB_SECTION_PROPS_TOP_CHORD
 
-                area_cm2 = bridge.output_dict.get(f"{pfx}.A")
-                rv_cm = bridge.output_dict.get(f"{pfx}.rv")
+                area_cm2 = bridge.output_dict.get(f"{pfx}.A.{pair_id}")
+                rv_cm = bridge.output_dict.get(f"{pfx}.rv.{pair_id}")
 
                 # Convert Area: cm² -> mm²
                 area_str = f"{float(area_cm2) * 100:.1f}" if area_cm2 is not None else ""
