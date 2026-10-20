@@ -5,14 +5,10 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-<<<<<<< HEAD:src/osdagbridge_core/core/reports/chap5.py
 from osdagbridge_core.core.utils.common import (
-=======
-from osdagbridge.core.utils.common import (
     KEY_TD_CB_SECTION_PROPS_BRACING,
     KEY_TD_CB_SECTION_PROPS_BOTTOM_CHORD,
     KEY_TD_CB_SECTION_PROPS_TOP_CHORD,
->>>>>>> 9d3c1f3 (Chap 5: Populate Ag and rmin):src/osdagbridge/core/reports/chap5.py
     KEY_DD_ARM_WHEEL_OH,
     KEY_DD_AS_BOT,
     KEY_DD_AS_LONG,
