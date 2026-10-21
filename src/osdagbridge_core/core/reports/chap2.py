@@ -186,12 +186,12 @@ def _girder_tables(input_dict, n_girders):
         for g_lbl, m_id, i in entries_for_table
     ]
     dim_rows = [
-        [g_lbl, _render_mm(input_dict, f"{KEY_MP_GIRDER_DEPTH}.G{i}.M1", ' mm'),
-         _render_mm(input_dict, f"{KEY_MP_GIRDER_WEB_THICKNESS}.G{i}.M1", ' mm'),
-         _render_mm(input_dict, f"{KEY_MP_GIRDER_TOP_FLANGE_WIDTH}.G{i}.M1", ' mm') + ', '
-         + _render_mm(input_dict, f"{KEY_MP_GIRDER_TOP_FLANGE_THICKNESS}.G{i}.M1", ' mm'),
-         _render_mm(input_dict, f"{KEY_MP_GIRDER_BOTTOM_FLANGE_WIDTH}.G{i}.M1", ' mm') + ', '
-         + _render_mm(input_dict, f"{KEY_MP_GIRDER_BOTTOM_FLANGE_THICKNESS}.G{i}.M1", ' mm')]
+        [g_lbl, _render_mm(input_dict, f"{KEY_MP_GIRDER_DEPTH}.G{i}.M1"),
+         _render_mm(input_dict, f"{KEY_MP_GIRDER_WEB_THICKNESS}.G{i}.M1"),
+         _render_mm(input_dict, f"{KEY_MP_GIRDER_TOP_FLANGE_WIDTH}.G{i}.M1") + ', '
+         + _render_mm(input_dict, f"{KEY_MP_GIRDER_TOP_FLANGE_THICKNESS}.G{i}.M1"),
+         _render_mm(input_dict, f"{KEY_MP_GIRDER_BOTTOM_FLANGE_WIDTH}.G{i}.M1") + ', '
+         + _render_mm(input_dict, f"{KEY_MP_GIRDER_BOTTOM_FLANGE_THICKNESS}.G{i}.M1")]
         for g_lbl, _, i in entries_for_table
     ]
     rst_rows = [

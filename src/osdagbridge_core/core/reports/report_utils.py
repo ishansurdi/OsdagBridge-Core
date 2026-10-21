@@ -54,11 +54,11 @@ def _render_value(source_dict, key, unit=""):
     return _tex(val) + unit
 
 
-def _render_mm(source_dict, key, unit=" mm"):
+def _render_mm(source_dict, key):
     val = source_dict.get(key)
     if val in ("", None):
         return ""
-    return _render_value({key: float(val) * 1000}, key, unit)
+    return _render_value({key: float(val) * 1000}, key)
 
 
 def _table_layout(headers, rows, widths=None, align=None):
