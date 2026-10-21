@@ -7,7 +7,7 @@ import math
 from typing import Any
 
 from osdagbridge_core.core.bridge_components.super_structure.crash_barrier.properties import RCC_DENSITY
-from osdagbridge_core.core.bridge_types.plate_girder.crossbracingforces import brace_geometry
+from osdagbridge_core.bridge_types.plate_girder.crossbracingforces import brace_geometry
 from osdagbridge_core.core.utils.common import (
     KEY_BOQ_END_DIAPHRAGM_WEIGHT_T,
     KEY_MP_ED_BRACING_TYPE,
