@@ -1061,8 +1061,8 @@ class GirderGraphEngine:
     def extract_reactions(self, load_case: str, girder_key: str) -> dict:
         """
         Return {'Ra': float, 'Rb': float} in kN for the given load case and girder.
-        Extracts directly from the real model reactions via _call_reactions(),
-        falling back to the SFD boundaries if extraction fails.
+        Extracts directly from the real model reactions via _call_reactions().
+        Returns None values when reaction extraction is unavailable.
         """
         try:
             df = self._call_reactions(load_case, girder_key)
@@ -1075,21 +1075,7 @@ class GirderGraphEngine:
         except Exception as e:
             logger.warning("extract_reactions via _call_reactions failed: %s", e)
 
-        # Fallback to SFD boundaries
-        res = self.extract_member_results(girder_key, load_case)
-        if res is None:
-            return {"Ra": None, "Rb": None}
-        xs, bmd, sfd, defl, all_data = res
-        if len(sfd) == 0:
-            return {"Ra": None, "Rb": None}
-            
-        # Use abs() — the arrow already indicates upward direction.
-        # Use sfd[-2] for Rb: the last node is often zero-padded by _smooth_nodal.
-        rb_idx = -2 if len(sfd) > 2 else -1
-        return {
-            "Ra": float(abs(sfd[0])),
-            "Rb": float(abs(sfd[rb_idx])),
-        }
+        return {"Ra": None, "Rb": None}
 
     def extract_loads(self, load_case: str) -> list[dict]:
         """
