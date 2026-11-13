@@ -63,10 +63,10 @@ _GROUPED_TABLE_BREAKS = set()
 _STIFFENER_CHECK_FIELDS = (
     (20, "Int.Stiff: Iys \u2265 Iys_min", KEY_SD_IS_IYS_MIN, KEY_SD_IS_IYS_PROV),
     (20, "Int.Stiff: Buckling Fqd\u2265Fq", KEY_SD_IS_FQ, KEY_SD_IS_FQD),
-    (21, "Brg.Stiff: Web Buckling", KEY_SD_BS_R, KEY_SD_BS_FCDW_WB),
-    (21, "Brg.Stiff: Local Crushing", KEY_SD_BS_R, KEY_SD_BS_FCDW_LC),
-    (21, "Brg.Stiff: Bearing Contact", KEY_SD_BS_R, KEY_SD_BS_FPSD),
-    (21, "Brg.Stiff: Column Buckling", KEY_SD_BS_R, KEY_SD_BS_FCD),
+    (21, "Brg.Stiff: Web Check (unstiffened web)", KEY_SD_BS_R, KEY_SD_BS_FCDW_WB),
+    (21, "Brg.Stiff: Web Local Capacity", KEY_SD_BS_R, KEY_SD_BS_FCDW_LC),
+    (21, "Brg.Stiff: Bearing Check", KEY_SD_BS_R, KEY_SD_BS_FPSD),
+    (21, "Brg.Stiff: Buckling Check", KEY_SD_BS_R, KEY_SD_BS_FCD),
 )
 
 
