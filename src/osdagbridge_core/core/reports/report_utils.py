@@ -71,7 +71,8 @@ _STIFFENER_CHECK_FIELDS = (
 
 
 def _governing_check(record, check_id, label=None):
-    """Return the governing (load case, check), retaining older girder-summary results."""
+    """Pick the governing saved check for Tables 5.1, 5.2, 5.4-5.6, 5.8-5.9 and 5.11."""
+    # Match by name when several checks share the same ID.
     # The engine uses distinct labels for shear buckling and plastic shear under ID 2.
     labels = (label, CHECK_NAME_ULS_SHEAR) if check_id == 2 and label == CHECK_NAME_ULS_SHEAR_BUCKLING else (label,)
     for name in labels:
@@ -89,7 +90,7 @@ def _governing_check(record, check_id, label=None):
 
 
 def _stored_shear_details(record, buckling_check):
-    """Read Table 5.4 details at the precision saved in the check notes."""
+    """Read shear details for Table 5.4 that are saved only in the check notes."""
     _, shear_check = _governing_check(record, 2, CHECK_NAME_ULS_SHEAR)
     values = {}
     notes = [(KEY_SD_SHEAR_AV, "Av", (shear_check or {}).get("note") or "")]
@@ -108,13 +109,14 @@ def _stored_shear_details(record, buckling_check):
 
 
 def stored_classification_details(design_results, girder):
-    """The flat classification record belongs only to the controlling girder."""
+    """Read saved classification for Table 5.2 only for the girder it describes."""
     if girder != design_results.get("controlling_girder"):
         return {}
     return _classification_fields(design_results.get("capacity_details") or {})
 
 
 def _classification_fields(capacity_details):
+    """Map saved flange and web classification fields to Table 5.2 keys."""
     classification = capacity_details.get("section_class") or {}
     return {key: classification[field] for key, field in (
         (KEY_SD_FLANGE_SLENDERNESS, "b_tf_ratio"),
@@ -127,13 +129,14 @@ def _classification_fields(capacity_details):
 
 
 def stored_ltb_properties(design_results, girder):
-    """Read demand-independent stage 2 LTB properties for the saved girder."""
+    """Read saved stage 2 LTB properties for the controlling girder in Table 5.6."""
     if girder != design_results.get("controlling_girder"):
         return {}
     return _stage2_ltb_fields(design_results.get("capacity_details") or {})
 
 
 def _stage2_ltb_fields(capacity_details):
+    """Map stage 2 LTB properties to Table 5.6 keys and convert units."""
     details = capacity_details.get("buckling_resistance") or {}
     return {key: details[field] * scale for key, field, scale in (
         (KEY_SD_SECTION_PROP_IV, "Iy_mm4", 1e-12),
@@ -145,7 +148,7 @@ def _stage2_ltb_fields(capacity_details):
 
 
 def _stored_ltb_details(check):
-    """Read construction-stage LTB fields at the precision saved in the note."""
+    """Read construction-stage LTB values saved only in the note for Table 5.6."""
     if check.get("name", check.get("label")) != CHECK_NAME_LTB_CONSTRUCTION:
         return {}
     note = check.get("note") or ""
@@ -162,12 +165,12 @@ def _stored_ltb_details(check):
 
 
 def _check_values(check, fields):
-    """Copy the saved demand and capacity into their report keys, when requested."""
+    """Copy saved demand and capacity into the required and provided columns of Tables 5.8 and 5.9."""
     return {key: check.get(field) for key, field in zip(fields, ("demand", "capacity")) if key is not None}
 
 
 def _stored_stiffener_values(record):
-    """Preserve the precision of stored stiffener checks."""
+    """Find each girder's saved stiffener checks for Tables 5.8 and 5.9."""
     values = {}
     for check_id, label, demand_key, capacity_key in _STIFFENER_CHECK_FIELDS:
         _, check = _governing_check(record, check_id, label)
@@ -177,7 +180,8 @@ def _stored_stiffener_values(record):
 
 
 def get_girder_report_details(backend):
-    """Fetch missing Chapter 5 details without changing the design outputs."""
+    """Fetch missing details for Tables 5.2, 5.4-5.6 and 5.8 from the existing engine."""
+    # Pass these details through the report payload so output_dict stays unchanged.
     results = {}
     design_results = backend.output_dict.get("design_results") or {}
     records = design_results.get("per_girder") or {}
@@ -187,6 +191,7 @@ def get_girder_report_details(backend):
         values = results[girder] = {}
 
         def capacity_for(case):
+            """Reuse a girder's capacity for the same load case across these tables."""
             if case not in cases:
                 return None
             if case not in capacities:
@@ -235,7 +240,7 @@ def get_girder_report_details(backend):
 
 
 def iter_girder_outputs(output_dict, girder_entries):
-    """Read published girder outputs; do not select or recompute report values here."""
+    """Give Tables 5.1, 5.2 and 5.4-5.9 one saved output dictionary per girder."""
     for index, (label, _) in enumerate(girder_entries, start=1):
         name, suffix = f"G{index}", f".G{index}.M1"
         values = {key[:-len(suffix)]: value for key, value in output_dict.items()
@@ -245,7 +250,7 @@ def iter_girder_outputs(output_dict, girder_entries):
 
 
 def iter_girder_section_outputs(output_dict, girder_entries):
-    """Read saved section results and convert them to Table 5.1 display units."""
+    """Read saved section properties and convert them to Table 5.1 display units."""
     records = (output_dict.get("design_results") or {}).get("per_girder") or {}
     member_fields = (
         (KEY_SD_SECTION_PROP_AREA, KEY_MP_GIRDER_SECTIONAL_AREA, 1e4),
