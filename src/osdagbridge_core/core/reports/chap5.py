@@ -158,7 +158,7 @@ from osdagbridge_core.core.utils.common import (
     KEY_SD_SHEAR_VCR,
     KEY_SD_SHEAR_VU,
     KEY_SD_STIFF_END_COUNT,
-    KEY_SD_STIFF_END_THICK,
+    KEY_MP_STIFFENER_BEARING_THICKNESS,
     KEY_SD_STIFF_INT_SPACING,
     KEY_SD_STIFF_INT_THICK,
     KEY_SD_STIFF_LONG,
@@ -358,7 +358,7 @@ def ch5_design_checks(checks_data, bridge, chart_paths=None) -> str:
         ["Shear Buckling Design Method", str(_render_value(bridge.output_dict, KEY_SD_STIFF_METHOD)).replace("_", " ").title()],
         ["Intermediate Stiffener Thickness (mm)", _render_value(bridge.output_dict, KEY_SD_STIFF_INT_THICK)],
         ["Intermediate Stiffener Spacing (mm)", _render_value(bridge.output_dict, KEY_SD_STIFF_INT_SPACING)],
-        ["Bearing Stiffener Thickness (mm)", _render_value(bridge.output_dict, KEY_SD_STIFF_END_THICK)],
+        ["Bearing Stiffener Thickness (mm)", _render_value(bridge.output_dict, KEY_MP_STIFFENER_BEARING_THICKNESS)],
         ["No. of Bearing Stiffeners (per face of web)", _render_value(bridge.output_dict, KEY_SD_STIFF_END_COUNT)],
         ["Longitudinal Stiffeners", _render_value(bridge.output_dict, KEY_SD_STIFF_LONG)],
     ]
