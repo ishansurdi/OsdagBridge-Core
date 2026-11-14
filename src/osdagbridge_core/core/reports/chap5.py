@@ -89,6 +89,17 @@ from osdagbridge_core.core.utils.common import (
     KEY_MATERIAL_GIRDER_E,
     KEY_MATERIAL_GIRDER_G,
     KEY_MP_ED_TYPE,
+    KEY_MP_ED_BRACING_CONNECTION,
+    KEY_MP_ED_BRACING_SECTION_DESIGNATION,
+    KEY_MP_ED_TOP_CHORD_SECTION_DESIG,
+    KEY_MP_ED_BOTTOM_CHORD_SECTION_DESIG,
+    KEY_MP_ED_IS_SECTION,
+    KEY_TD_ED_PROP_A,
+    KEY_TD_ED_PROP_RV,
+    KEY_TD_ED_TOP_CHORD_PROP_A,
+    KEY_TD_ED_TOP_CHORD_PROP_RV,
+    KEY_TD_ED_BOTTOM_CHORD_PROP_A,
+    KEY_TD_ED_BOTTOM_CHORD_PROP_RV,
     KEY_SD_BOTTOM_FLANGE_THICKNESS,
     KEY_SD_BOTTOM_FLANGE_WIDTH,
     KEY_SD_BS_FCD,
@@ -962,6 +973,37 @@ def ch5_design_checks(checks_data, bridge, chart_paths=None) -> str:
                 group_rows.append([label, conn_type, section, area_str, rmin_str])
             cb_forces_groups.append((pair, group_rows))
 
+    # Read end diaphragm sections independently of the cross-bracing tables.
+    ed_section_groups = []
+    out = bridge.output_dict
+    for i in range(1, len(girder_entries)):
+        suffix = f".G{i}G{i+1}"
+        ed_type = out.get(KEY_MP_ED_TYPE + suffix)
+        if not ed_type:
+            continue
+        connection = ""
+        if ed_type == "Cross Bracing":
+            connection = out.get(KEY_MP_ED_BRACING_CONNECTION + suffix) or ""
+            sections = (
+                ("Diagonal", KEY_MP_ED_BRACING_SECTION_DESIGNATION, KEY_TD_ED_PROP_A, KEY_TD_ED_PROP_RV),
+                ("Top chord", KEY_MP_ED_TOP_CHORD_SECTION_DESIG, KEY_TD_ED_TOP_CHORD_PROP_A, KEY_TD_ED_TOP_CHORD_PROP_RV),
+                ("Bottom chord", KEY_MP_ED_BOTTOM_CHORD_SECTION_DESIG, KEY_TD_ED_BOTTOM_CHORD_PROP_A, KEY_TD_ED_BOTTOM_CHORD_PROP_RV),
+            )
+        else:
+            sections = ((ed_type, KEY_MP_ED_IS_SECTION, KEY_TD_ED_PROP_A, KEY_TD_ED_PROP_RV),)
+
+        rows = []
+        for label, section_key, area_key, radius_key in sections:
+            section = out.get(section_key + suffix)
+            if not section and label in ("Top chord", "Bottom chord"):
+                continue
+            area = out.get(area_key + suffix)
+            radius = out.get(radius_key + suffix)
+            rows.append([label, _tex(connection), _tex(section or ""),
+                         f"{float(area) * 100:.1f}" if area is not None else "",
+                         f"{float(radius) * 10:.1f}" if radius is not None else ""])
+        ed_section_groups.append((f"G{i}-G{i+1}", rows))
+
     # Generate Table 5.20(b) rows
     def get_status_str(slnd_str, limit):
         try:
@@ -1700,7 +1742,9 @@ End diaphragms at the supports transfer transverse loads to the bearings, restra
 \noindent
 \setlength{\tabcolsep}{6pt}
 """ + render_grouped_report_table(
-    "End Diaphragm --- Connection and Section Properties", cb_forces_groups,
+    "End Diaphragm --- Connection and Section Properties", ed_section_groups or [
+        ("Between Girders", [["", "", "", "", ""]])
+    ],
     headers=["panel", "member", "connection", "section", r"$A_g$ (mm²)", r"$r_{min}$ (mm)"],
     widths=[2.0, 2.0, 2.2, 2.5, 2.0, 2.0],
     align=["C", "L", "L", "C", "C", "C"], escape=False, longtable_min_rows=1) + r"""
