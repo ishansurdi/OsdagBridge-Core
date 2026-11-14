@@ -185,8 +185,6 @@ def executive_summary(input_dict, output_dict, fig_paths) -> str:
     gov_raw = str(gov_name).strip() if gov_name not in (None, '', 'None') else ''
     gov = _tex(gov_raw) if gov_raw else ''
     ur = _tex(overall_utilization_ratio) if overall_utilization_ratio else ''
-    gov_table = (r"\makecell[c]{" + r"\\".join(_tex(p) for p in gov_raw.replace(".", ". ").replace(":", ": ").split()) + "}"
-                 if gov_raw else '')
 
     # --- Dynamic Table 1: fetch backend-populated labels via exact suffix pattern ---
     # defaults.py populates: KEY_MP_GD_SELECT_GIRDER + '.G{i}' = 'G{i}'
@@ -238,7 +236,7 @@ def executive_summary(input_dict, output_dict, fig_paths) -> str:
         "Final Bridge Geometry (after optimization)",
         [["Member ID"] + [mid for _, mid in labels],
          ["Section Designation"] + [sec] * n_cols,
-         [r"Govern-\linebreak{}ing\linebreak{}Check"] + [gov_table] * n_cols,
+         [r"Govern-\linebreak{}ing\linebreak{}Check"] + [gov] * n_cols,
          [r"Utiliza-\linebreak{}tion Ratio"] + [ur] * n_cols],
         headers=[""] + [lbl for lbl, _ in labels],
         widths=[1.6] + [1.25] * n_cols,
