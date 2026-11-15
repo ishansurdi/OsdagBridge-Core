@@ -245,7 +245,6 @@ def iter_girder_outputs(output_dict, girder_entries):
         name, suffix = f"G{index}", f".G{index}.M1"
         values = {key[:-len(suffix)]: value for key, value in output_dict.items()
                   if isinstance(key, str) and key.endswith(suffix)}
-        values.update(output_dict.get("girder_outputs", {}).get(name) or {})
         yield label, dict(values, _report_girder=name)
 
 

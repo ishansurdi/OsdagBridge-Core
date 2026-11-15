@@ -132,7 +132,6 @@ from osdagbridge_core.core.utils.common import (
     KEY_SD_MD_CAPACITY,
     KEY_SD_MN_AXIAL,
     KEY_SD_MN_MOMENT,
-    KEY_SD_MN_RATIO,
     KEY_SD_MU_APPLIED,
     KEY_SD_PANEL_CD,
     KEY_SD_PNA_DEPTH,
@@ -363,7 +362,7 @@ def ch5_design_checks(checks_data, bridge, chart_paths=None, girder_details=None
             _mv_status = "---"
 
         # M-N interaction: None → no axial load → N/A.
-        _mn_r = mn.get("dcr", girder_output.get(KEY_SD_MN_RATIO))
+        _mn_r = mn.get("dcr")
         _mn_ax = girder_output.get(KEY_SD_MN_AXIAL)
         _mn_mo = girder_output.get(KEY_SD_MN_MOMENT)
         if _mn_r is not None:
@@ -374,8 +373,11 @@ def ch5_design_checks(checks_data, bridge, chart_paths=None, girder_details=None
             if _mn_status == "FAIL":
                 _mn_status = r"\textcolor{red}{FAIL}"
         else:
-            _mn_cond = _mn_val = "N/A" if all(key in girder_output for key in (
-                KEY_SD_MN_RATIO, KEY_SD_MN_AXIAL, KEY_SD_MN_MOMENT)) else "Not available"
+            axial_demands = [case.get("Nu_kN") for case in (record.get("per_lc") or {}).values()]
+            no_axial_demand = bool(axial_demands) and all(
+                demand is not None and demand <= 0.0 for demand in axial_demands
+            )
+            _mn_cond = _mn_val = "N/A" if no_axial_demand else "Not available"
             _mn_status = "---" if _mn_val == "Not available" else "N/A"
 
         t55_items = [
@@ -528,10 +530,10 @@ def ch5_design_checks(checks_data, bridge, chart_paths=None, girder_details=None
     def _bs_check(girder_output, resist_key):
         prov = girder_output.get(resist_key)
         _bs_r = girder_output.get(KEY_SD_BS_R)
-        if girder_output.get("_report_girder") and (prov is None or _bs_r is None):
+        if prov is None or _bs_r is None:
             return ("Not available", "Not available", "---")
         # Resistance not computed (guidance mode) → N/A.
-        if prov is None or float(prov) <= 0.0 or _bs_r is None:
+        if float(prov) <= 0.0:
             return ("N/A", "N/A", "N/A")
         req_s = f"{_bs_r} kN"
         prov_s = f"{prov} kN"
