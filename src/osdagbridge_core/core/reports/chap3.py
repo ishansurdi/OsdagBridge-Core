@@ -4,12 +4,15 @@
 # =============================================================================
 
 from osdagbridge_core.core.utils.common import (
+    KEY_APPLIED_LOAD_COMBINATIONS,
+    KEY_ALL_LOAD_COMBINATIONS,
     KEY_BL_IRC_CLASS_SV,
     KEY_CB_LOAD,
     KEY_LL_ECCENTRICITY,
     KEY_LL_CUSTOM_VEHICLES,
     KEY_LL_FOOTPATH_PRESSURE_MODE,
     KEY_LL_FOOTPATH_PRESSURE_VALUE,
+    KEY_TS_NO_OF_FOOTPATHS,
     KEY_LL_IRC_70R_BOGIE,
     KEY_LL_IRC_70R_TRACKED,
     KEY_LL_IRC_70R_WHEELED,
@@ -25,12 +28,15 @@ from osdagbridge_core.core.utils.common import (
     KEY_SL_DAMPING,
     KEY_SL_DEAD_LOAD_MODE,
     KEY_SL_DEAD_LOAD_VALUE,
+    KEY_SL_DEAD_LOAD_WEIGHT,
     KEY_SL_FORCE_LONGITUDINAL,
     KEY_SL_FORCE_TRANSVERSE,
+    KEY_SL_FORCE_VERTICAL,
     KEY_SL_HORIZONTAL_COEFF,
     KEY_SL_IMPORTANCE_FACTOR,
     KEY_SL_LIVE_LOAD_MODE,
     KEY_SL_LIVE_LOAD_VALUE,
+    KEY_SL_LIVE_LOAD_WEIGHT,
     KEY_SL_SEISMIC_ZONE,
     KEY_SL_SOIL_TYPE,
     KEY_SL_SA_G,
@@ -61,16 +67,22 @@ from osdagbridge_core.core.utils.common import (
     KEY_LL_IMPACT_FACTOR_70R_TRACKED,
     KEY_LL_IMPACT_FACTOR_FATIGUE,
     KEY_LL_BRAKING_VEHICLES,
+    KEY_LL_APPLIED_BRAKING,
+    KEY_LL_GOVERNING_CASE,
+    KEY_LL_CASES_CONSIDERED,
     KEY_CARRIAGEWAY_WIDTH,
     KEY_LL_VEHICLE_TOTAL_LOAD_CLASS_A,
     KEY_LL_VEHICLE_TOTAL_LOAD_70R_WHEELED,
     KEY_LL_VEHICLE_TOTAL_LOAD_70R_TRACKED,
     KEY_LL_VEHICLE_TOTAL_LOAD_FATIGUE,
     KEY_LL_VEHICLE_TOTAL_LOAD_CLASS_SV,
+    KEY_WL_TRANSVERSE_WIND_LL,
+    KEY_WL_LONGITUDINAL_WIND_LL,
+    KEY_WL_LL_APPLICATION_HEIGHT,
 )
 
 from osdagbridge_core.core.reports.report_utils import (
-    _tex, _render_value, render_report_table, render_vehicle_live_load_table,
+    _tex, _render_value, render_report_table,
     render_parameter_value_table
 )
 
@@ -225,6 +237,23 @@ def ch3_loads(input_dict, output_dict=None):
     if not vehicle_rows:
         vehicle_rows = [["None", "---", "---", "No", "---", "---"]]
 
+    labels = {_kind_to_type.get(kind, kind): name for name, key, kind in vehicle_defs if key != KEY_LL_IRC_70R_BOGIE}
+    braking_rows = []
+    for (case, vehicle), values in output_dict.get(KEY_LL_APPLIED_BRAKING, {}).items():
+        side = {"SV-L": "left" if vehicle == "SV" else "right",
+                "SV-R": "right" if vehicle == "SV" else "left"}.get(case.split()[0])
+        label = labels.get(vehicle, labels["sv"] if vehicle == "SV" else vehicle)
+        braking_rows.append([case, f"{label} ({side})" if side else label, *(f"{v:.2f}" for v in values)])
+
+    vehicle_headers = ["Vehicle", "Total Load (kN)", "Impact Factor"]
+    governing_case = output_dict.get(KEY_LL_GOVERNING_CASE)
+    live_load_case_rows = [
+        [name.replace("Class70RT", "Class 70R Tracked (Note (a))"), f"{factor:.2f}"]
+        for name, factor in output_dict.get(KEY_LL_CASES_CONSIDERED, ())
+    ]
+    vehicle_header_rows = [[("Governing vehicle load case (LL): " + _tex(governing_case), 3)],
+                           vehicle_headers] if governing_case else None
+
     fp_mode  = input_dict.get(KEY_LL_FOOTPATH_PRESSURE_MODE, "")
     fp_value = input_dict.get(KEY_LL_FOOTPATH_PRESSURE_VALUE, "")
     if str(fp_mode).strip().lower() in ("as per irc 6", "as per irc6", "automatic"):
@@ -240,6 +269,11 @@ def ch3_loads(input_dict, output_dict=None):
         ["Footpath live load", fp_str.replace(r" kN/m\textsuperscript{2}", ""), r"kN/m\textsuperscript{2}"],
         ["Pressure mode", _tex(fp_mode) if fp_mode not in ("", None) else "N/A", "---"],
     ]
+    if str(input_dict.get(KEY_TS_NO_OF_FOOTPATHS, "")).strip() in {"1", "2"}:
+        footpath_rows.extend([
+            ["Load combination treatment", "Included in LL; LL factors apply", "---"],
+            ["Vehicle impact", "Not applied (IRC 6 Cl. 208.4)", "---"],
+        ])
 
     # Vz / Pz — prefer stored computed values; fall back to IRC6 Table 12
     vz_val = input_dict.get(KEY_WL_HOURLY_MEAN_WIND)
@@ -328,7 +362,7 @@ def ch3_loads(input_dict, output_dict=None):
         except Exception:
             pass
 
-    # --- Table 3.7: Load Combinations (dynamically generated from IRC 6) ---
+    # IRC 6 reference rows for older results without applied combinations.
     _LOAD_LABEL_MAP = {
         'dead_load':         'DL',
         'surfacing':         'SIDL',
@@ -368,6 +402,25 @@ def ch3_loads(input_dict, output_dict=None):
         cases = _fmt_factors(combo['factors'])
         lc_rows.append([f"SLS-{i:02d}", cases])
 
+    applied_combinations = output_dict.get(KEY_APPLIED_LOAD_COMBINATIONS)
+    if applied_combinations is not None:
+        lc_rows = [[_tex(label), _tex(expr)] for name in applied_combinations
+                   for label, _, expr in [name.partition(": ")]]
+        if not lc_rows:
+            lc_rows = [["---", "No load combinations were built."]]
+    lc_caption = "Load Combinations" if applied_combinations is not None else "Load Combinations (IRC 6 reference)"
+    selected_combinations = output_dict.get(KEY_ALL_LOAD_COMBINATIONS)
+    if selected_combinations is not None:
+        lc_rows = []
+        for combo in selected_combinations:
+            if not _checked(combo, "included"):
+                continue
+            label, _, expr = combo.get("name", "").partition(":")
+            lc_rows.append([_tex(label.strip()), _tex(combo.get("expr") or expr.strip())])
+        if not lc_rows:
+            lc_rows = [["---", "No load combinations selected."]]
+        lc_caption = "Selected Load Combinations"
+
     dead_rows = [
         ["Steel Self-Weight Applied", _render_value(input_dict, KEY_MATERIAL_GIRDER_DENSITY, r" kN/m\textsuperscript{3}")],
         ["Concrete Deck Weight", _render_value(input_dict, KEY_MATERIAL_DECK_DENSITY, r" kN/m\textsuperscript{3}")],
@@ -388,6 +441,12 @@ def ch3_loads(input_dict, output_dict=None):
         ["Longitudinal Wind Force", _render_value(output_dict, KEY_WL_LONGITUDINAL_WIND_FORCE, " kN")],
         ["Vertical Wind Force", _render_value(output_dict, KEY_WL_VERTICAL_WIND_FORCE, " kN")],
     ]
+
+    wind_ll_rows = [
+        [r"Transverse force, $F_{\mathrm{TLL}}$", _render_value(output_dict, KEY_WL_TRANSVERSE_WIND_LL, " N")],
+        [r"Longitudinal force, $F_{\mathrm{LLL}}$", _render_value(output_dict, KEY_WL_LONGITUDINAL_WIND_LL, " N")],
+        ["Application height above roadway", _render_value(output_dict, KEY_WL_LL_APPLICATION_HEIGHT, " m")],
+    ]
     earthquake_rows = [
         ["Seismic Zone", _render_value(input_dict, 'seismic_zone') + " [from Project Location]"],
         ["Zone Factor, Z", _render_value(input_dict, KEY_SL_ZONE_FACTOR)],
@@ -396,8 +455,11 @@ def ch3_loads(input_dict, output_dict=None):
         ["Sa/g", _render_value(input_dict, KEY_SL_SA_G)],
         ["Horizontal Seismic Coefficient, Ah", _render_value(input_dict, KEY_SL_HORIZONTAL_COEFF)],
         ["Vertical Seismic Coefficient, Av", _render_value(input_dict, KEY_SL_VERTICAL_COEFF)],
+        ["Dead-load weight used for seismic analysis", _render_value(output_dict, KEY_SL_DEAD_LOAD_WEIGHT, " kN")],
+        ["Live-load weight used for seismic analysis", _render_value(output_dict, KEY_SL_LIVE_LOAD_WEIGHT, " kN")],
         ["Horizontal Seismic Force (longitudinal)", _render_value(output_dict, KEY_SL_FORCE_LONGITUDINAL, " kN")],
         ["Horizontal Seismic Force (transverse)", _render_value(output_dict, KEY_SL_FORCE_TRANSVERSE, " kN")],
+        ["Vertical Seismic Force (Feq,Y)", _render_value(output_dict, KEY_SL_FORCE_VERTICAL, " kN")],
     ]
     temperature_rows = [
         ["Maximum Shade Temperature", _render_value(input_dict, 'shade_temp_max') + r" $^\circ$C"],
@@ -418,7 +480,16 @@ This section summarizes all loads applied to the bridge and the load combination
 """ + render_parameter_value_table("Dead Load for Surfacing (DW)", surfacing_rows) + r"""
 
 \vspace{1em}
-""" + render_vehicle_live_load_table(vehicle_rows) + r"""
+""" + render_report_table("Vehicle Live Loads (LL)", [row[:3] for row in vehicle_rows],
+                          headers=vehicle_headers, header_rows=vehicle_header_rows,
+                          header_clines={0: "1-3"},
+                          align=["L", "C", "C"], longtable=True, escape=False) + (
+    "\n\\vspace{1em}\n" + render_report_table("Live-load Cases Considered (Table 6A)", live_load_case_rows,
+        headers=["Live-load case", "Lane factor (Cl. 205, Table 8)"],
+        align=["L", "C"], longtable=True) if live_load_case_rows else "") + (
+    "\n\\vspace{1em}\n" + render_report_table("Braking Loads (unfactored)", braking_rows,
+        headers=["Live Load Case (including SV)", "Vehicle Used", "Fx (kN)", "Mz (kN-m)", "Eccentricity (m)"],
+        align=["L", "L", "C", "C", "C"], longtable=True) if braking_rows else "") + r"""
 
 \vspace{1em}
 """ + render_report_table(
@@ -426,7 +497,11 @@ This section summarizes all loads applied to the bridge and the load combination
     headers=["parameter", "value", "unit"], align=["L", "C", "C"], escape=False) + r"""
 
 \vspace{1em}
-""" + render_parameter_value_table("Wind Load (WL) --- per IRC 6", wind_rows, longtable=True) + r"""
+""" + render_parameter_value_table("Wind Load (WL) --- per IRC 6", wind_rows, longtable=True) + (r"""
+
+\vspace{1em}
+""" + render_parameter_value_table("Wind on Live Load", wind_ll_rows)
+    if KEY_WL_TRANSVERSE_WIND_LL in output_dict else "") + r"""
 
 \vspace{1em}
 """ + render_parameter_value_table("Earthquake Load (EL) --- per IRC 6", earthquake_rows, longtable=True) + r"""
@@ -435,9 +510,14 @@ This section summarizes all loads applied to the bridge and the load combination
 """ + render_parameter_value_table("Temperature Load (TL) --- per IRC 6", temperature_rows) + r"""
 
 \vspace{1em}
-""" + render_report_table("Load Combinations", lc_rows, headers=["combination ID", "load cases"], align=["C", "L"], longtable=True, escape=False) + r"""
+""" + render_report_table(lc_caption, lc_rows, headers=["combination ID", "load cases"], align=["C", "L"], longtable=True, escape=False) + r"""
 
-\noindent\textit{Note: All IRC 6 load combinations are auto-generated by OsdagBridge. User-defined custom combinations, if any, are appended.}
+\noindent LL denotes carriageway live load plus footway live load and governing braking where present.
+In SV combinations, LL denotes accompanying traffic and its braking where applied; SV includes its own braking when enabled.
+WL denotes transverse, longitudinal and vertical wind on the structure.
+Wind on live load is added at the WL factor when both WL and LL are present.
+
+\noindent\textit{Note: Saved selections retain their original IDs and expressions. A listed term does not confirm that its load case was applied in the analysis.}
 """
 
 

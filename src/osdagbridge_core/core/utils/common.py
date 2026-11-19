@@ -793,6 +793,9 @@ KEY_LL_IMPACT_FACTOR_CLASS_AA_70R = "loading.live_load.impact_factor.class_aa_70
 KEY_LL_IMPACT_FACTOR_70R_TRACKED = "loading.live_load.impact_factor.class_70r_tracked"
 KEY_LL_IMPACT_FACTOR_FATIGUE = "loading.live_load.impact_factor.fatigue"
 KEY_LL_BRAKING_VEHICLES = "loading.live_load.braking.vehicles"   # vehicle types whose braking is applied
+KEY_LL_APPLIED_BRAKING = "loading.live_load.braking.applied"
+KEY_LL_GOVERNING_CASE = "loading.live_load.governing_case"
+KEY_LL_CASES_CONSIDERED = "loading.live_load.cases_considered"
 KEY_LL_VEHICLE_TOTAL_LOAD_CLASS_A = "loading.live_load.vehicle_total_load.class_a"
 KEY_LL_VEHICLE_TOTAL_LOAD_70R_WHEELED = "loading.live_load.vehicle_total_load.70r_wheeled"
 KEY_LL_VEHICLE_TOTAL_LOAD_70R_TRACKED = "loading.live_load.vehicle_total_load.70r_tracked"
@@ -845,6 +848,9 @@ KEY_SL_HORIZONTAL_COEFF         = "loading.seismic_load.computed.horizontal_coef
 KEY_SL_VERTICAL_COEFF           = "loading.seismic_load.computed.vertical_coeff"
 KEY_SL_FORCE_LONGITUDINAL       = "loading.seismic_load.computed.force_longitudinal"
 KEY_SL_FORCE_TRANSVERSE         = "loading.seismic_load.computed.force_transverse"
+KEY_SL_FORCE_VERTICAL           = "loading.seismic_load.computed.force_vertical"
+KEY_SL_DEAD_LOAD_WEIGHT         = "loading.seismic_load.computed.dead_load_weight"
+KEY_SL_LIVE_LOAD_WEIGHT         = "loading.seismic_load.computed.live_load_weight"
 
 #--------------- Wind Load Sub-Tab -------------------------------------------------
 KEY_WL_TAB                      = "loading.wind_load.tab"
@@ -896,6 +902,7 @@ KEY_WL_LONGITUDINAL_WIND_FORCE  = "loading.wind_load.computed.longitudinal_wind_
 KEY_WL_VERTICAL_WIND_FORCE      = "loading.wind_load.computed.vertical_wind_force"
 KEY_WL_TRANSVERSE_WIND_LL       = "loading.wind_load.computed.transverse_wind_ll"
 KEY_WL_LONGITUDINAL_WIND_LL     = "loading.wind_load.computed.longitudinal_wind_ll"
+KEY_WL_LL_APPLICATION_HEIGHT    = "loading.wind_load.computed.live_load_application_height"
 
 #--------------- Temperature Load Sub-Tab -------------------------------------------------
 KEY_TL_TAB                      = "loading.temperature_load.tab"
@@ -913,6 +920,7 @@ KEY_TL_TEMP_FALL                = "loading.temperature_load.computed.temp_fall"
 KEY_LC_COMBINATIONS   = "loading.load_combination.combinations"
 KEY_LC_TAB            = "loading.load_combination.tab"
 KEY_ALL_LOAD_COMBINATIONS = "loading.load_combination.all_load_combbinations"
+KEY_APPLIED_LOAD_COMBINATIONS = "loading.load_combination.applied"
 
 # ── ULS Load Combination Case Keys ─────────────────────────────────────────
 

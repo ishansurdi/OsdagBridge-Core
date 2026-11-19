@@ -88,10 +88,15 @@ from osdagbridge_core.core.utils.common import (
     KEY_SL_LIVE_LOAD_MODE, KEY_SL_LIVE_LOAD_VALUE,
     KEY_SL_HORIZONTAL_COEFF, KEY_SL_VERTICAL_COEFF,
     KEY_SL_FORCE_LONGITUDINAL, KEY_SL_FORCE_TRANSVERSE,
+    KEY_SL_FORCE_VERTICAL, KEY_SL_DEAD_LOAD_WEIGHT, KEY_SL_LIVE_LOAD_WEIGHT,
     KEY_WL_TRANSVERSE_WIND_FORCE, KEY_WL_LONGITUDINAL_WIND_FORCE, KEY_WL_VERTICAL_WIND_FORCE,
+    KEY_WL_TRANSVERSE_WIND_LL, KEY_WL_LONGITUDINAL_WIND_LL, KEY_WL_LL_APPLICATION_HEIGHT,
     KEY_WL_WIND_LL_ECC_MODE, KEY_WL_WIND_LL_ECC_VALUE,
     KEY_CB_HEIGHT, KEY_RL_HEIGHT,
     KEY_LL_BRAKING_VEHICLES,
+    KEY_LL_APPLIED_BRAKING,
+    KEY_LL_GOVERNING_CASE,
+    KEY_LL_CASES_CONSIDERED,
     KEY_MD_WIDTH, KEY_MD_LOAD,
     KEY_RL_WIDTH,
     KEY_TS_DECK_OVERHANG,
@@ -258,6 +263,7 @@ from osdagbridge_core.core.utils.common import (
     KEY_MP_STIFFENER_INTERMEDIATE_SPACING,
     KEY_MP_STIFFENER_LONGITUDINAL,
     KEY_ALL_LOAD_COMBINATIONS,
+    KEY_APPLIED_LOAD_COMBINATIONS,
     KEY_LC_COMBINATIONS,
     )
 
@@ -762,6 +768,8 @@ class PlateGirderBridge:
         self.create_governing_ll_load_case(dataset_initial, partial_safety_factor=1.0)
 
         self.output_dict.update(self.grillage_model.live_load_report_values())
+        self.output_dict[KEY_LL_GOVERNING_CASE] = getattr(self.grillage_model, "governing_ll_name", None)
+        self.output_dict[KEY_LL_CASES_CONSIDERED] = getattr(self.grillage_model, "live_load_cases_considered", [])
 
         if getattr(self.grillage_model, "sv_load_cases_list", None):
             self.create_sv_braking_load_case()
@@ -779,13 +787,15 @@ class PlateGirderBridge:
         uls = self.create_uls_combinations()
         
         sls = self.create_sls_combinations()
+        applied = uls + sls
 
         if getattr(self.grillage_model, "sv_load_cases_list", None):
             bridge_logger.sub_step("Creating Special Vehicle ULS and SLS combinations...")
-            self.create_sv_uls_combinations()
-            self.create_sv_sls_combinations()
+            applied += self.create_sv_uls_combinations()
+            applied += self.create_sv_sls_combinations()
 
         self.output_dict[KEY_ALL_LOAD_COMBINATIONS] = self._all_load_combinations(uls + sls)
+        self.output_dict[KEY_APPLIED_LOAD_COMBINATIONS] = [lc.name for lc in applied]
 
     def _stage_cad_generation(self):
         # Validate that the CAD parameter DTO can be assembled, but do NOT build
@@ -1162,6 +1172,7 @@ class PlateGirderBridge:
                 'reactions':  rxn_sum or {},
             }
 
+        output_dict[KEY_LL_APPLIED_BRAKING] = self.grillage_model.applied_braking
         payload = build_report_payload(request, report_inputs, output_dict)
         payload.girder_report_details = get_girder_report_details(self)
 
@@ -1655,6 +1666,9 @@ class PlateGirderBridge:
             self.output_dict[KEY_WL_TRANSVERSE_WIND_FORCE]   = round(wind_result["FT_kN"], 3)
             self.output_dict[KEY_WL_LONGITUDINAL_WIND_FORCE] = round(wind_result["FL_kN"], 3)
             self.output_dict[KEY_WL_VERTICAL_WIND_FORCE]     = round(wind_result["FV_kN"], 3)
+            self.output_dict[KEY_WL_TRANSVERSE_WIND_LL]      = wind_result[KEY_WL_TRANSVERSE_WIND_LL]
+            self.output_dict[KEY_WL_LONGITUDINAL_WIND_LL]    = wind_result[KEY_WL_LONGITUDINAL_WIND_LL]
+            self.output_dict[KEY_WL_LL_APPLICATION_HEIGHT]   = wind_result[KEY_WL_LL_APPLICATION_HEIGHT]
 
     # ============================================================
     #   Temperature Load Analysis  IRC:6-2017 Cl.215
@@ -2215,10 +2229,13 @@ class PlateGirderBridge:
             partial_safety_factor=1.5,  # IRC:6-2017 Table B.2 seismic ULS
         )
 
-        # Persist the horizontal seismic forces for the report (Table 3.5).
+        # Persist the seismic forces and resolved load weights for the report.
         if eq_result:
             self.output_dict[KEY_SL_FORCE_LONGITUDINAL] = round(eq_result["Feq_X_kN"], 3)
             self.output_dict[KEY_SL_FORCE_TRANSVERSE]   = round(eq_result["Feq_Z_kN"], 3)
+            self.output_dict[KEY_SL_FORCE_VERTICAL]     = round(eq_result["Feq_Y_kN"], 3)
+            self.output_dict[KEY_SL_DEAD_LOAD_WEIGHT]   = round(eq_result["dead_load_kN"], 3)
+            self.output_dict[KEY_SL_LIVE_LOAD_WEIGHT]   = round(eq_result["live_load_kN"], 3)
 
     def vehicle_lane_coordinates(self) -> list:
         """
